@@ -1,0 +1,39 @@
+version: '3.7'
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    user: root
+    ports:
+      - 8081:8080
+      - 50000:50000
+    environment:
+      - JVM_OPTS=-Xmx1024m -Xms512m -XX:MaxPermSize=256m
+    volumes:
+      - /vagrant/stacks/jenkins/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/local/bin/docker
+    networks:
+      - traefik-public
+      - docker_gwbridge
+    deploy:
+      placement:
+        constraints: [node.role == worker]
+      labels:
+        - traefik.enable=true
+        - traefik.port=80
+        - traefik.docker.network=traefik-public
+        - traefik.constraint-label=traefik-public
+        - traefik.http.routers.jenkins-jenkins-http.entrypoints=http
+        - traefik.http.routers.jenkins-jenkins-http.rule=Host(`jenkins.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.jenkins-jenkins-http.middlewares=https-redirect
+        - traefik.http.routers.jenkins-jenkins-https.entrypoints=https
+        - traefik.http.routers.jenkins-jenkins-https.rule=Host(`jenkins.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.jenkins-jenkins-https.tls=true
+        # - traefik.http.routers.jenkins-jenkins-https.tls.certresolver=le
+        # Internal port, NOT external port
+        - traefik.http.services.jenkins-jenkins.loadbalancer.server.port=8080
+        - traefik.http.services.jenkins-jenkins.loadbalancer.server.scheme=http
+networks:
+  traefik-public:
+    external: true
+

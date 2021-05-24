@@ -1,0 +1,54 @@
+version: '3.6'
+
+services:
+
+  redmine:
+    image: redmine
+    ports:
+      - 9581:3000
+    depends_on:
+      - mysql
+    environment:
+      REDMINE_DB_MYSQL: mysql
+      REDMINE_DB_PASSWORD: example
+      REDMINE_SECRET_KEY_BASE: supersecretkey
+    networks:
+      - traefik-public
+      - redmine_network
+    volumes:
+      - /vagrant/stacks/redmine/redmine_data:/usr/src/redmine/files
+    deploy:
+      placement:
+        constraints: [node.role == worker]
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.constraint-label=traefik-public
+        - traefik.http.routers.redmine-http.rule=Host(`redmine.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.redmine-http.entrypoints=http
+        - traefik.http.routers.redmine-http.middlewares=https-redirect
+        - traefik.http.routers.redmine-https.rule=Host(`redmine.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.redmine-https.entrypoints=https
+        - traefik.http.routers.redmine-https.tls=true
+        # - traefik.http.routers.redmine-https.tls.certresolver=le
+        - traefik.http.services.redmine.loadbalancer.server.port=3000
+
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: redmine
+    volumes:
+      - /vagrant/stacks/redmine/mysql_data:/var/lib/mysql
+    networks:
+      - redmine_network
+    deploy:
+      placement:
+        constraints: [node.role == worker]
+
+networks:
+  redmine_network:
+    driver: overlay
+    attachable: true
+  traefik-public:
+    external: true
