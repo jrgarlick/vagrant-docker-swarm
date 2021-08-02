@@ -11,8 +11,9 @@ services:
       TASKS: 1
       NETWORKS: 1
     networks:
-      - mgmt
+      - private
     deploy:
+      mode: global
       placement:
         constraints:
           - node.role == manager
@@ -34,7 +35,7 @@ services:
           # as the node with it has the volume for the certificates
           # - node.labels.traefik-public.traefik-public-certificates == true
           # Run Traefik only on worker nodes
-          - node.role == worker
+          - node.role == manager
 
       labels:
         # Enable Traefik for this service, to make it available in the public network
@@ -72,7 +73,7 @@ services:
         - traefik.http.services.traefik-public.loadbalancer.server.port=8080
     volumes:
       # Add Docker as a mounted volume, so that Traefik can read the labels of other services
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # - /var/run/docker.sock:/var/run/docker.sock:ro
       # Mount the volume to store the certificates
       - traefik-public-certificates:/certificates
       - /vagrant/stacks/traefik:/certs
@@ -110,7 +111,7 @@ services:
       # Use the public network created to be shared between Traefik and
       # any other service that needs to be publicly available with HTTPS
       - traefik-public
-      - mgmt
+      - private
 
 volumes:
   # Create a volume to store the certificates, there is a constraint to make sure
@@ -124,4 +125,4 @@ networks:
   traefik-public:
     external: true
   # Private Management network for traefik to talk to the swarm proxy
-  mgmt:
+  private:

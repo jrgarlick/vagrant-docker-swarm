@@ -1,0 +1,54 @@
+version: '3.7'
+services:
+  app:
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    user: root
+    volumes:
+      - /vagrant/stacks/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-public
+      - private
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.enable=true
+        - traefik.port=80
+        - traefik.docker.network=traefik-public
+        - traefik.constraint-label=traefik-public
+        - traefik.http.routers.prometheus-prometheus-http.entrypoints=http
+        - traefik.http.routers.prometheus-prometheus-http.rule=Host(`prometheus.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.prometheus-prometheus-http.middlewares=https-redirect
+        - traefik.http.routers.prometheus-prometheus-https.entrypoints=https
+        - traefik.http.routers.prometheus-prometheus-https.rule=Host(`prometheus.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.prometheus-prometheus-https.tls=true
+        # - traefik.http.routers.prometheus-prometheus-https.tls.certresolver=le
+        # Internal port, NOT external port
+        - traefik.http.services.prometheus-prometheus.loadbalancer.server.port=9090
+        - traefik.http.services.prometheus-prometheus.loadbalancer.server.scheme=http
+        - prometheus-job=prometheus
+        - prometheus-port=9090
+        # - prometheus-scrape-network=network1
+        # - prometheus-env=production
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+    - 8080:8080
+    deploy:
+      mode: global
+    networks:
+      - private
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    
+networks:
+  private:
+  traefik-public:
+    external: true
+

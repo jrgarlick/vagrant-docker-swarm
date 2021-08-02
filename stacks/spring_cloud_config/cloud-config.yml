@@ -1,0 +1,35 @@
+version: '3.7'
+services:
+  server:
+    image: hyness/spring-cloud-config-server
+    ports:
+      - 8888:8888
+    environment:
+      - JVM_OPTS=-Xmx512m -Xms256m -XX:MaxPermSize=256m
+    volumes:
+      - /vagrant/stacks/spring_cloud_config/config_data:/config
+    environment:
+      - SPRING_PROFILES_ACTIVE=native
+    networks:
+      - traefik-public
+    deploy:
+      placement:
+        constraints: [node.role == worker]
+      labels:
+        - traefik.enable=true
+        - traefik.port=80
+        - traefik.docker.network=traefik-public
+        - traefik.constraint-label=traefik-public
+        - traefik.http.routers.cloud-config-http.entrypoints=http
+        - traefik.http.routers.cloud-config-http.rule=Host(`config.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.cloud-config-http.middlewares=https-redirect
+        - traefik.http.routers.cloud-config-https.entrypoints=https
+        - traefik.http.routers.cloud-config-https.rule=Host(`config.${SWARM_DOMAIN?Variable not set}`)
+        - traefik.http.routers.cloud-config-https.tls=true
+        # - traefik.http.routers.cloud-config-https.tls.certresolver=le
+        # Internal port, NOT external port
+        - traefik.http.services.cloud-config.loadbalancer.server.port=8888
+        - traefik.http.services.cloud-config.loadbalancer.server.scheme=http
+networks:
+  traefik-public:
+    external: true

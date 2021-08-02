@@ -44,7 +44,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             manager.vm.network :forwarded_port, guest: 8080, host: 8080
             manager.vm.network :forwarded_port, guest: 5000, host: 5000
             manager.vm.network :forwarded_port, guest: 9000, host: 9000
-            manager.vm.provision "shell",inline: "cp /vagrant/scripts/swarm-network.sh /etc/profile.d/", privileged: true
+            manager.vm.provision "shell",inline: "cp /vagrant/cluster-bootstrap/swarm-network.sh /etc/profile.d/", privileged: true
+            manager.vm.provision "shell",inline: "cp /vagrant/cluster-bootstrap/daemon.json /etc/docker/", privileged: true
             manager.vm.provision "shell",inline: "docker swarm init --listen-addr 172.20.20.11:2377 --advertise-addr 172.20.20.11:2377 | grep 'docker swarm join --token' > /vagrant/.vagrant/join-worker.sh", privileged: true
             manager.vm.provision "shell",inline: "docker swarm join-token manager | grep 'docker swarm join' > /vagrant/.vagrant/join-manager.sh", privileged: true
             # manager.vm.provision "shell",inline: "docker stack deploy -c /vagrant/stacks/portainer-agent-stack.yml portainer"
@@ -65,6 +66,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
             worker.vm.network :private_network, ip: "#{WORKER_IP}#{i}"
             worker.vm.hostname = "worker0#{i}"
             worker.vm.provision "shell",inline: "cp /vagrant/scripts/swarm-network.sh /etc/profile.d/", privileged: true
+            worker.vm.provision "shell",inline: "cp /vagrant/cluster-bootstrap/daemon.json /etc/docker/", privileged: true
             worker.vm.provision "shell",inline:"/bin/bash /vagrant/.vagrant/join-worker.sh"
             # worker.trigger.before :destroy do |trigger|
             #   trigger.warn = "Draining worker node 'worker0#{i}"
